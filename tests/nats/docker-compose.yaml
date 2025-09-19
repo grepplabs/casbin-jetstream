@@ -1,0 +1,32 @@
+
+services:
+  nats:
+    image: nats:2.11.9-alpine
+    restart: unless-stopped
+    command: -c /etc/nats/nats.conf
+    ports:
+      - "4222:4222"
+    volumes:
+      - ./nats.conf:/etc/nats/nats.conf
+    healthcheck:
+      test: ["CMD", "wget", "-qO/dev/null", "http://127.0.0.1:8222/healthz"]
+      interval: 3s
+      timeout: 1s
+      retries: 10
+      start_period: 5s
+
+  nats-tls:
+    image: nats:2.11.9-alpine
+    restart: unless-stopped
+    command: -c /etc/nats/nats-tls.conf
+    ports:
+      - "4223:4222"
+    volumes:
+      - ./nats-tls.conf:/etc/nats/nats-tls.conf:ro
+      - ./cfssl/certs:/etc/nats/certs:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO/dev/null", "http://127.0.0.1:8222/healthz"]
+      interval: 3s
+      timeout: 1s
+      retries: 10
+      start_period: 5s

@@ -1,0 +1,10 @@
+{
+  "CN": "nats-client",
+  "hosts": [""],
+  "key": {
+    "algo": "rsa", "size": 4096
+  },
+  "names": [
+    { "O": "NATS", "OU": "Client" }
+  ]
+}

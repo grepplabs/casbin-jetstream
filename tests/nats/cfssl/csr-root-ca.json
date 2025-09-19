@@ -1,0 +1,13 @@
+{
+  "CN": "NATS Root CA",
+  "key": {
+    "algo": "rsa",
+    "size": 4096
+  },
+  "names": [
+    {
+      "O": "NATS",
+      "OU": "NATS Root CA"
+    }
+  ]
+}

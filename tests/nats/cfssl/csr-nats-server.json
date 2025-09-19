@@ -1,0 +1,15 @@
+{
+  "CN": "localhost",
+  "hosts": [
+    "localhost",
+    "127.0.0.1",
+    "127.0.0.1.nip.io"
+  ],
+  "key": {
+    "algo": "rsa",
+    "size": 4096
+  },
+  "names": [
+    { "O": "NATS", "OU": "Server" }
+  ]
+}
