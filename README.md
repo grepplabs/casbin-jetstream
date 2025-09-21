@@ -2,6 +2,7 @@ Casbin JetStream
 ====
 
 [![Build](https://github.com/grepplabs/casbin-jetstream/actions/workflows/ci.yml/badge.svg)](https://github.com/grepplabs/casbin-jetstream/actions/workflows/ci.yml)
+[![Godoc](https://godoc.org/github.com/casbin/casbin?status.svg)](https://pkg.go.dev/github.com/grepplabs/casbin-jetstream)
 
 Casbin JetStream is the [NATS JetStream](https://docs.nats.io/nats-concepts/jetstream) adapter for [Casbin](https://github.com/casbin/casbin). With this library, Casbin can load policy from JetStream or save policy to it.
 
@@ -60,4 +61,5 @@ func main() {
 			},
 		},
 	})
+	defer a.Close()
 ```
