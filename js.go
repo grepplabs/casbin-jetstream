@@ -59,7 +59,7 @@ type Auth struct {
 func newJSClient(config *Config) (jetstream.JetStream, error) {
 	logger := config.Logger
 	opts := []nats.Option{
-		nats.MaxReconnects(5),
+		nats.MaxReconnects(-1),
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
 			if err != nil {
 				logger.Warn("disconnected from NATS", slog.String("error", err.Error()))
