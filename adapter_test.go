@@ -177,6 +177,14 @@ func TestAdapter(t *testing.T) {
 	testAutoSave(t, a)
 }
 
+func TestAdapterWithRecreateOnSave(t *testing.T) {
+	a, err := NewAdapter(&Config{RecreateOnSave: true})
+	require.Nil(t, err)
+	defer a.Close()
+	testSaveLoad(t, a)
+	testAutoSave(t, a)
+}
+
 func TestAdapterWithTLS(t *testing.T) {
 	certDir := "tests/nats/cfssl/certs/"
 	a, err := NewAdapter(&Config{
