@@ -43,12 +43,15 @@ type Config struct {
 	Logger *slog.Logger
 	// Concurrency controls the maximum number of concurrent goroutines used when fetching or purging policies from the KV bucket (default: NumCPU() / 2)
 	Concurrency int
+	// RecreateOnSave determines whether the KV bucket is recreated instead of deleting all elements.
+	RecreateOnSave bool
 }
 
 // Adapter represents the NATS Jetstream adapter for policy storage.
 type Adapter struct {
-	logger *slog.Logger
-	store  *store
+	logger         *slog.Logger
+	store          *store
+	recreateOnSave bool
 }
 
 func (a *Adapter) Close() error {
@@ -81,8 +84,9 @@ func NewAdapter(config *Config) (*Adapter, error) {
 		return nil, fmt.Errorf("failed to create store: %w", err)
 	}
 	a := &Adapter{
-		logger: config.Logger,
-		store:  s,
+		logger:         config.Logger,
+		store:          s,
+		recreateOnSave: config.RecreateOnSave,
 	}
 	// Safety net: cleanup if caller forgets Close.
 	runtime.AddCleanup(a, cleanup, s)
@@ -155,10 +159,20 @@ func (a *Adapter) SavePolicy(model model.Model) error {
 func (a *Adapter) SavePolicyCtx(ctx context.Context, model model.Model) error {
 	defer logDuration(a.logger, "saving policies", time.Now())
 	a.logger.Info("saving policies")
-	err := a.store.PurgeAllPolicies(ctx)
-	if err != nil {
-		return err
+
+	var err error
+	if a.recreateOnSave {
+		err = a.store.RecreateBucket(ctx)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = a.store.PurgeAllPolicies(ctx)
+		if err != nil {
+			return err
+		}
 	}
+
 	for ptype, ast := range model["p"] {
 		for _, rule := range ast.Policy {
 			line := a.savePolicyLine(ptype, rule)

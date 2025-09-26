@@ -13,6 +13,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	tlsconfig "github.com/grepplabs/cert-source/config"
@@ -138,9 +139,10 @@ func newJSClient(config *Config) (jetstream.JetStream, error) {
 
 type store struct {
 	js          jetstream.JetStream
-	kv          jetstream.KeyValue
+	kv          atomic.Pointer[jetstream.KeyValue]
 	logger      *slog.Logger
 	concurrency int
+	bucket      string
 }
 
 func cleanup(s *store) {
@@ -167,12 +169,26 @@ func newStore(ctx context.Context, config *Config) (*store, error) {
 			return nil, fmt.Errorf("failed to create jetstream bucket '%s': %w", config.Bucket, err)
 		}
 	}
-	return &store{
+	s := &store{
 		js:          js,
-		kv:          kv,
 		logger:      config.Logger,
 		concurrency: config.Concurrency,
-	}, nil
+		bucket:      config.Bucket,
+	}
+	s.setKV(kv)
+	return s, nil
+}
+
+func (s *store) getKV() jetstream.KeyValue {
+	p := s.kv.Load()
+	if p == nil {
+		return nil
+	}
+	return *p
+}
+
+func (s *store) setKV(kv jetstream.KeyValue) {
+	s.kv.Store(&kv)
 }
 
 func keyFor(r CasbinRule) string {
@@ -183,12 +199,31 @@ func keyFor(r CasbinRule) string {
 	return "rule_" + hex.EncodeToString(sum[:])
 }
 
+func (s *store) RecreateBucket(ctx context.Context) error {
+	s.logger.Info("recreating jetstream bucket", slog.String("bucket", s.bucket))
+
+	if err := s.js.DeleteKeyValue(ctx, s.bucket); err != nil {
+		if !errors.Is(err, jetstream.ErrBucketNotFound) {
+			return fmt.Errorf("failed to delete jetstream bucket %q: %w", s.bucket, err)
+		}
+	}
+	kv, err := s.js.CreateKeyValue(ctx, jetstream.KeyValueConfig{
+		Bucket: s.bucket,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to recreate jetstream bucket %q: %w", s.bucket, err)
+	}
+	s.setKV(kv)
+	s.logger.Info("jetstream bucket recreated", slog.String("bucket", s.bucket))
+	return nil
+}
+
 func (s *store) CreatePolicy(ctx context.Context, r CasbinRule) error {
 	data, err := json.Marshal(r)
 	if err != nil {
 		return err
 	}
-	_, err = s.kv.Create(ctx, keyFor(r), data)
+	_, err = s.getKV().Create(ctx, keyFor(r), data)
 	if err != nil {
 		if errors.Is(err, jetstream.ErrKeyExists) {
 			return nil
@@ -201,12 +236,12 @@ func (s *store) CreatePolicy(ctx context.Context, r CasbinRule) error {
 func (s *store) PurgePolicy(ctx context.Context, r CasbinRule) error {
 	key := keyFor(r)
 	s.logger.Debug("one: purging key", slog.String("key", key))
-	err := s.kv.Purge(ctx, key)
+	err := s.getKV().Purge(ctx, key)
 	return err
 }
 
 func (s *store) PurgeAllPolicies(ctx context.Context) error {
-	lister, err := s.kv.ListKeys(ctx)
+	lister, err := s.getKV().ListKeys(ctx)
 	if err != nil {
 		return err
 	}
@@ -219,7 +254,7 @@ func (s *store) PurgeAllPolicies(ctx context.Context) error {
 		key := k // capture
 		grp.Go(func() error {
 			s.logger.Debug("all: purging key", slog.String("key", key))
-			return s.kv.Purge(gctx, key)
+			return s.getKV().Purge(gctx, key)
 		})
 	}
 	err = grp.Wait()
@@ -227,7 +262,7 @@ func (s *store) PurgeAllPolicies(ctx context.Context) error {
 		return err
 	}
 	// compact the bucket to remove deleted entries
-	return s.kv.PurgeDeletes(ctx, jetstream.DeleteMarkersOlderThan(-1))
+	return s.getKV().PurgeDeletes(ctx, jetstream.DeleteMarkersOlderThan(-1))
 }
 
 func (s *store) PurgeFilteredPolicies(ctx context.Context, pattern CasbinRule) error {
@@ -251,7 +286,7 @@ func (s *store) PurgeFilteredPolicies(ctx context.Context, pattern CasbinRule) e
 		key := e.Key() // capture
 		grp.Go(func() error {
 			s.logger.Debug("filtered: purging key", slog.String("key", key))
-			return s.kv.Purge(gctx, key)
+			return s.getKV().Purge(gctx, key)
 		})
 	}
 	err = grp.Wait()
@@ -259,7 +294,7 @@ func (s *store) PurgeFilteredPolicies(ctx context.Context, pattern CasbinRule) e
 		return err
 	}
 	// compact the bucket to remove deleted entries
-	return s.kv.PurgeDeletes(ctx, jetstream.DeleteMarkersOlderThan(-1))
+	return s.getKV().PurgeDeletes(ctx, jetstream.DeleteMarkersOlderThan(-1))
 }
 
 func filteredMatch(pattern, line CasbinRule) bool {
@@ -344,7 +379,7 @@ func (el *entryLister) Err() error                              { return el.err 
 
 func (s *store) ListEntries(ctx context.Context, opts ...jetstream.WatchOpt) (*entryLister, error) {
 	opts = append(opts, jetstream.IgnoreDeletes())
-	watcher, err := s.kv.WatchAll(ctx, opts...)
+	watcher, err := s.getKV().WatchAll(ctx, opts...)
 	if err != nil {
 		return nil, err
 	}

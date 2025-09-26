@@ -12,7 +12,15 @@ import (
 )
 
 func BenchmarkHasPolicySmall(b *testing.B) {
-	adapter, err := NewAdapter(&Config{})
+	doBenchmarkHasPolicySmall(b, &Config{})
+}
+
+func BenchmarkHasPolicySmallWithRecreateOnSave(b *testing.B) {
+	doBenchmarkHasPolicySmall(b, &Config{RecreateOnSave: true})
+}
+
+func doBenchmarkHasPolicySmall(b *testing.B, config *Config) {
+	adapter, err := NewAdapter(config)
 	require.Nil(b, err)
 	defer adapter.Close()
 	e, err := casbin.NewEnforcer("examples/rbac_model.conf", adapter)
@@ -30,7 +38,15 @@ func BenchmarkHasPolicySmall(b *testing.B) {
 }
 
 func BenchmarkHasPolicyMedium(b *testing.B) {
-	adapter, err := NewAdapter(&Config{})
+	doBenchmarkHasPolicyMedium(b, &Config{})
+}
+
+func BenchmarkHasPolicyMediumWithRecreateOnSave(b *testing.B) {
+	doBenchmarkHasPolicyMedium(b, &Config{RecreateOnSave: true})
+}
+
+func doBenchmarkHasPolicyMedium(b *testing.B, config *Config) {
+	adapter, err := NewAdapter(config)
 	require.Nil(b, err)
 	defer adapter.Close()
 	e, err := casbin.NewEnforcer("examples/rbac_model.conf", adapter)
@@ -51,7 +67,15 @@ func BenchmarkHasPolicyMedium(b *testing.B) {
 }
 
 func BenchmarkHasPolicyLarge(b *testing.B) {
-	adapter, err := NewAdapter(&Config{})
+	doBenchmarkHasPolicyLarge(b, &Config{})
+}
+
+func BenchmarkHasPolicyLargeWithRecreateOnSave(b *testing.B) {
+	doBenchmarkHasPolicyLarge(b, &Config{RecreateOnSave: true})
+}
+
+func doBenchmarkHasPolicyLarge(b *testing.B, config *Config) {
+	adapter, err := NewAdapter(config)
 	require.Nil(b, err)
 	defer adapter.Close()
 	e, err := casbin.NewEnforcer("examples/rbac_model.conf", adapter)
@@ -171,7 +195,14 @@ func BenchmarkRemovePolicyMedium(b *testing.B) {
 }
 
 func BenchmarkRemovePolicyLarge(b *testing.B) {
-	adapter, err := NewAdapter(&Config{})
+	doBenchmarkRemovePolicyLarge(b, &Config{})
+}
+func BenchmarkRemovePolicyLargeWithRecreateOnSave(b *testing.B) {
+	doBenchmarkRemovePolicyLarge(b, &Config{RecreateOnSave: true})
+}
+
+func doBenchmarkRemovePolicyLarge(b *testing.B, config *Config) {
+	adapter, err := NewAdapter(config)
 	require.Nil(b, err)
 	defer adapter.Close()
 	e, err := casbin.NewEnforcer("examples/rbac_model.conf", adapter)
