@@ -2,7 +2,16 @@ name: Build
 
 on:
   push:
+    branches:
+      - '**'
+    tags:
+      - 'v*.*.*'
   pull_request:
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
 
 jobs:
   test:
@@ -13,9 +22,9 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ matrix.go }}
       - name: Start NATS server and test
@@ -25,3 +34,23 @@ jobs:
       - name: Stop NATS server
         if: always()
         run: make stop-nats-server
+
+  release:
+    # Only run on tag pushes that look like v1.2.3
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
