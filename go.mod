@@ -3,7 +3,7 @@ module github.com/grepplabs/casbin-jetstream
 go 1.24.7
 
 require (
-	github.com/casbin/casbin/v2 v2.134.0
+	github.com/casbin/casbin/v2 v2.135.0
 	github.com/grepplabs/cert-source v0.0.9
 	github.com/nats-io/nats.go v1.47.0
 	github.com/stretchr/testify v1.11.1
