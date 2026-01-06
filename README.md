@@ -19,7 +19,7 @@ Casbin JetStream is the [NATS JetStream](https://docs.nats.io/nats-concepts/jets
 package main
 
 import (
- "github.com/casbin/3"
+ "github.com/casbin/v3"
  jsadapter "github.com/grepplabs/casbin-jetstream"
 )
 
