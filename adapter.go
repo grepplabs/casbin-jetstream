@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/casbin/casbin/v2/model"
-	"github.com/casbin/casbin/v2/persist"
+	"github.com/casbin/casbin/v3/model"
+	"github.com/casbin/casbin/v3/persist"
 	"github.com/nats-io/nats.go"
 )
 
@@ -93,7 +93,7 @@ func NewAdapter(config *Config) (*Adapter, error) {
 	return a, nil
 }
 
-func loadPolicyLine(line CasbinRule, model model.Model) error {
+func loadPolicyLine(line CasbinRule, m model.Model) error {
 	var p = []string{line.PType, line.V0, line.V1, line.V2, line.V3, line.V4, line.V5}
 	index := len(p) - 1
 	for p[index] == "" {
@@ -101,7 +101,7 @@ func loadPolicyLine(line CasbinRule, model model.Model) error {
 	}
 	index += 1
 	p = p[:index]
-	return persist.LoadPolicyArray(p, model)
+	return persist.LoadPolicyArray(p, m)
 }
 
 func (a *Adapter) savePolicyLine(ptype string, rule []string) CasbinRule {
@@ -129,11 +129,11 @@ func (a *Adapter) savePolicyLine(ptype string, rule []string) CasbinRule {
 }
 
 // LoadPolicy loads all policy rules from the storage.
-func (a *Adapter) LoadPolicy(model model.Model) error {
-	return a.LoadPolicyCtx(context.Background(), model)
+func (a *Adapter) LoadPolicy(m model.Model) error {
+	return a.LoadPolicyCtx(context.Background(), m)
 }
 
-func (a *Adapter) LoadPolicyCtx(ctx context.Context, model model.Model) error {
+func (a *Adapter) LoadPolicyCtx(ctx context.Context, m model.Model) error {
 	defer logDuration(a.logger, "loading policies", time.Now())
 	a.logger.Debug("loading policies")
 	lines, err := a.store.GetAllPolicies(ctx)
@@ -142,7 +142,7 @@ func (a *Adapter) LoadPolicyCtx(ctx context.Context, model model.Model) error {
 	}
 	a.logger.Info("loading policies count", slog.Int("count", len(lines)))
 	for _, line := range lines {
-		err := loadPolicyLine(line, model)
+		err := loadPolicyLine(line, m)
 		if err != nil {
 			return err
 		}
@@ -151,12 +151,12 @@ func (a *Adapter) LoadPolicyCtx(ctx context.Context, model model.Model) error {
 }
 
 // SavePolicy saves all policy rules to the storage.
-func (a *Adapter) SavePolicy(model model.Model) error {
-	return a.SavePolicyCtx(context.Background(), model)
+func (a *Adapter) SavePolicy(m model.Model) error {
+	return a.SavePolicyCtx(context.Background(), m)
 }
 
 // SavePolicyCtx saves policy to the storage.
-func (a *Adapter) SavePolicyCtx(ctx context.Context, model model.Model) error {
+func (a *Adapter) SavePolicyCtx(ctx context.Context, m model.Model) error {
 	defer logDuration(a.logger, "saving policies", time.Now())
 	a.logger.Info("saving policies")
 
@@ -173,7 +173,7 @@ func (a *Adapter) SavePolicyCtx(ctx context.Context, model model.Model) error {
 		}
 	}
 
-	for ptype, ast := range model["p"] {
+	for ptype, ast := range m["p"] {
 		for _, rule := range ast.Policy {
 			line := a.savePolicyLine(ptype, rule)
 			err = a.store.CreatePolicy(ctx, line)
@@ -182,7 +182,7 @@ func (a *Adapter) SavePolicyCtx(ctx context.Context, model model.Model) error {
 			}
 		}
 	}
-	for ptype, ast := range model["g"] {
+	for ptype, ast := range m["g"] {
 		for _, rule := range ast.Policy {
 			line := a.savePolicyLine(ptype, rule)
 			err = a.store.CreatePolicy(ctx, line)

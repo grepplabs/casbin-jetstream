@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/casbin/casbin/v2"
-	"github.com/casbin/casbin/v2/model"
-	fileadapter "github.com/casbin/casbin/v2/persist/file-adapter"
-	"github.com/casbin/casbin/v2/util"
+	"github.com/casbin/casbin/v3"
+	"github.com/casbin/casbin/v3/model"
+	fileadapter "github.com/casbin/casbin/v3/persist/file-adapter"
+	"github.com/casbin/casbin/v3/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -159,12 +159,12 @@ func TestNilField(t *testing.T) {
 	require.Nil(t, err)
 	e.EnableAutoSave(false)
 
-	ok, err := e.AddPolicy("", "data1", "write")
+	_, err = e.AddPolicy("", "data1", "write")
 	require.Nil(t, err)
 	e.SavePolicy()
 	assert.Nil(t, e.LoadPolicy())
 
-	ok, err = e.Enforce("", "data1", "write")
+	ok, err := e.Enforce("", "data1", "write")
 	require.Nil(t, err)
 	require.Equal(t, ok, true)
 }
