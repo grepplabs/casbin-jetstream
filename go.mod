@@ -4,7 +4,7 @@ go 1.24.7
 
 require (
 	github.com/casbin/casbin/v3 v3.10.0
-	github.com/grepplabs/cert-source v0.0.9
+	github.com/grepplabs/cert-source v0.1.0
 	github.com/nats-io/nats.go v1.49.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/sync v0.19.0
